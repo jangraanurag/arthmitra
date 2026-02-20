@@ -1,0 +1,132 @@
+/* Print Styles */
+@media print {
+
+    /* Hide UI elements */
+    .sidebar,
+    .page-header button,
+    .page-header .btn,
+    .toast-container,
+    .modal-overlay,
+    .input-group,
+    .card__header button,
+    .card__header .btn,
+    /* Hide specific non-printable areas if tagged */
+    .no-print {
+        display: none !important;
+    }
+
+    /* Layout Adjustments */
+    body,
+    #root,
+    .app-shell,
+    main {
+        background: white !important;
+        color: black !important;
+        height: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .app-shell {
+        display: block !important;
+    }
+
+    main {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Card Adjustments for Print */
+    .card {
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        margin-bottom: 20px !important;
+        break-inside: avoid;
+    }
+
+    .card__header {
+        border-bottom: 2px solid #000 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* Typography */
+    body {
+        font-family: 'Times New Roman', serif !important;
+        font-size: 12pt !important;
+        line-height: 1.5;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: 'Helvetica', 'Arial', sans-serif !important;
+        color: black !important;
+    }
+
+    /* Tables */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 10pt !important;
+    }
+
+    th {
+        background: #f0f0f0 !important;
+        color: black !important;
+        font-weight: bold !important;
+        border-bottom: 2px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    td {
+        border-bottom: 1px solid #ddd !important;
+    }
+
+    tr {
+        break-inside: avoid;
+    }
+
+    /* Page Setup */
+    @page {
+        size: A4;
+        margin: 2cm;
+    }
+
+    /* Links */
+    a {
+        text-decoration: none !important;
+        color: black !important;
+    }
+
+    /* Ensure specific elements expand */
+    .data-table {
+        width: 100% !important;
+    }
+
+    /* Custom Print Header (Visible only in print) */
+    .print-header {
+        display: block !important;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        text-align: center;
+    }
+
+    /* Hide scrollbars */
+    ::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Hide Print Header on Screen */
+.print-header {
+    display: none;
+}
