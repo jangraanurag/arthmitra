@@ -351,6 +351,8 @@ pub struct SalaryStructure {
     pub hra: f64,
     pub conveyance: f64,
     pub special: f64,
+    pub traveling_allowance: f64,
+    pub food_allowance: f64,
     pub other_earnings: f64,
     pub pf_applicable: bool,
     pub esi_applicable: bool,
@@ -366,6 +368,8 @@ pub struct SaveSalaryStructureRequest {
     pub hra: f64,
     pub conveyance: f64,
     pub special: f64,
+    pub traveling_allowance: f64,
+    pub food_allowance: f64,
     pub other_earnings: f64,
     pub pf_applicable: bool,
     pub esi_applicable: bool,
@@ -392,6 +396,8 @@ pub struct PayrollEntry {
     pub hra: f64,
     pub conveyance: f64,
     pub special: f64,
+    pub traveling_allowance: f64,
+    pub food_allowance: f64,
     pub other_earnings: f64,
     pub gross: f64,
     pub pf_employee: f64,
@@ -401,9 +407,27 @@ pub struct PayrollEntry {
     pub pt: f64,
     pub tds: f64,
     pub other_deductions: f64,
+    pub leave_deductions: f64,
+    pub late_coming_deductions: f64,
+    pub overtime_amount: f64,
+    pub advance_payout: f64,
+    pub advance_deduction: f64,
     pub total_deductions: f64,
     pub net_pay: f64,
     pub journal_entry_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePayrollEntryRequest {
+    pub traveling_allowance: f64,
+    pub food_allowance: f64,
+    pub leave_deductions: f64,
+    pub late_coming_deductions: f64,
+    pub overtime_amount: f64,
+    pub advance_payout: f64,
+    pub advance_deduction: f64,
+    pub other_deductions: f64,
+    pub other_earnings: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

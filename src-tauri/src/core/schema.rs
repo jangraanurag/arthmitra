@@ -263,6 +263,30 @@ fn perform_migrations(conn: &Connection) -> Result<()> {
         )?;
     }
 
+    // Migration 9: Advanced Payroll Components
+    let has_traveling_allowance: bool = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('salary_structures') WHERE name='traveling_allowance'",
+        [],
+        |row| Ok(row.get::<_, i32>(0)? > 0),
+    )?;
+
+    if !has_traveling_allowance {
+        conn.execute_batch(
+            r#"
+            ALTER TABLE salary_structures ADD COLUMN traveling_allowance REAL NOT NULL DEFAULT 0;
+            ALTER TABLE salary_structures ADD COLUMN food_allowance      REAL NOT NULL DEFAULT 0;
+
+            ALTER TABLE payroll_entries ADD COLUMN traveling_allowance    REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN food_allowance         REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN leave_deductions       REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN late_coming_deductions REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN overtime_amount        REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN advance_payout         REAL NOT NULL DEFAULT 0;
+            ALTER TABLE payroll_entries ADD COLUMN advance_deduction      REAL NOT NULL DEFAULT 0;
+            "#,
+        )?;
+    }
+
     Ok(())
 }
 

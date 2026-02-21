@@ -131,6 +131,7 @@ pub fn run() {
             commands::payroll::get_payroll_runs,
             commands::payroll::compute_payroll,
             commands::payroll::get_payroll_entries,
+            commands::payroll::update_payroll_entry,
             commands::payroll::process_payroll,
         ])
         .run(tauri::generate_context!())

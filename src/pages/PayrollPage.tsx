@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
     Users, Plus, X, RefreshCw, Play, CheckCircle,
-    User, Briefcase, Settings, Save
+    Briefcase, Settings, Save, Edit3
 } from 'lucide-react';
 import { useAppStore } from '../store';
 
@@ -29,6 +29,8 @@ interface SalaryStructure {
     hra: number;
     conveyance: number;
     special: number;
+    traveling_allowance: number;
+    food_allowance: number;
     other_earnings: number;
     pf_applicable: boolean;
     esi_applicable: boolean;
@@ -53,6 +55,8 @@ interface PayrollEntry {
     hra: number;
     conveyance: number;
     special: number;
+    traveling_allowance: number;
+    food_allowance: number;
     other_earnings: number;
     gross: number;
     pf_employee: number;
@@ -61,6 +65,11 @@ interface PayrollEntry {
     esi_employer: number;
     pt: number;
     tds: number;
+    leave_deductions: number;
+    late_coming_deductions: number;
+    overtime_amount: number;
+    advance_payout: number;
+    advance_deduction: number;
     other_deductions: number;
     total_deductions: number;
     net_pay: number;
@@ -78,7 +87,8 @@ const EMPTY_EMP = {
     bank_name: '', bank_account: '', bank_ifsc: '',
 };
 const EMPTY_SAL = {
-    basic: '', hra: '', conveyance: '', special: '', other_earnings: '',
+    basic: '', hra: '', conveyance: '', special: '',
+    traveling_allowance: '', food_allowance: '', other_earnings: '',
     pf_applicable: true, esi_applicable: true, pt_applicable: true,
     effective_from: now.toISOString().split('T')[0],
 };
@@ -108,6 +118,14 @@ export function PayrollPage() {
     const [processing, setProcessing] = useState(false);
     const [computedRun, setComputedRun] = useState<PayrollRun | null>(null);
     const [computedEntries, setComputedEntries] = useState<PayrollEntry[]>([]);
+
+    // Variable Pay Modal
+    const [editEntry, setEditEntry] = useState<PayrollEntry | null>(null);
+    const [entryForm, setEntryForm] = useState({
+        traveling_allowance: '', food_allowance: '', other_earnings: '',
+        overtime_amount: '', leave_deductions: '', late_coming_deductions: '',
+        advance_payout: '', advance_deduction: '', other_deductions: ''
+    });
 
     const fetchAll = useCallback(async () => {
         if (!uuid) return;
@@ -164,6 +182,8 @@ export function PayrollPage() {
                 setSalForm({
                     basic: String(sal.basic), hra: String(sal.hra),
                     conveyance: String(sal.conveyance), special: String(sal.special),
+                    traveling_allowance: String(sal.traveling_allowance),
+                    food_allowance: String(sal.food_allowance),
                     other_earnings: String(sal.other_earnings),
                     pf_applicable: sal.pf_applicable, esi_applicable: sal.esi_applicable,
                     pt_applicable: sal.pt_applicable,
@@ -185,9 +205,11 @@ export function PayrollPage() {
                     effective_from: salForm.effective_from,
                     basic: parseFloat(salForm.basic) || 0,
                     hra: parseFloat(salForm.hra) || 0,
-                    conveyance: parseFloat(salForm.conveyance) || 0,
-                    special: parseFloat(salForm.special) || 0,
-                    other_earnings: parseFloat(salForm.other_earnings) || 0,
+                    conveyance: parseFloat(salForm.conveyance as string) || 0,
+                    special: parseFloat(salForm.special as string) || 0,
+                    traveling_allowance: parseFloat(salForm.traveling_allowance as string) || 0,
+                    food_allowance: parseFloat(salForm.food_allowance as string) || 0,
+                    other_earnings: parseFloat(salForm.other_earnings as string) || 0,
                     pf_applicable: salForm.pf_applicable,
                     esi_applicable: salForm.esi_applicable,
                     pt_applicable: salForm.pt_applicable,
@@ -220,6 +242,45 @@ export function PayrollPage() {
             setTab('history');
         } catch (e: unknown) { alert(`Error: ${e}`); }
         finally { setProcessing(false); }
+    };
+
+    const openEditEntry = (entry: PayrollEntry) => {
+        setEditEntry(entry);
+        setEntryForm({
+            traveling_allowance: String(entry.traveling_allowance || ''),
+            food_allowance: String(entry.food_allowance || ''),
+            other_earnings: String(entry.other_earnings || ''),
+            overtime_amount: String(entry.overtime_amount || ''),
+            leave_deductions: String(entry.leave_deductions || ''),
+            late_coming_deductions: String(entry.late_coming_deductions || ''),
+            advance_payout: String(entry.advance_payout || ''),
+            advance_deduction: String(entry.advance_deduction || ''),
+            other_deductions: String(entry.other_deductions || '')
+        });
+    };
+
+    const handleSaveEntry = async () => {
+        if (!editEntry) return;
+        try {
+            const req = {
+                traveling_allowance: parseFloat(entryForm.traveling_allowance) || 0,
+                food_allowance: parseFloat(entryForm.food_allowance) || 0,
+                other_earnings: parseFloat(entryForm.other_earnings) || 0,
+                overtime_amount: parseFloat(entryForm.overtime_amount) || 0,
+                leave_deductions: parseFloat(entryForm.leave_deductions) || 0,
+                late_coming_deductions: parseFloat(entryForm.late_coming_deductions) || 0,
+                advance_payout: parseFloat(entryForm.advance_payout) || 0,
+                advance_deduction: parseFloat(entryForm.advance_deduction) || 0,
+                other_deductions: parseFloat(entryForm.other_deductions) || 0,
+            };
+            const updated = await invoke<PayrollEntry>('update_payroll_entry', {
+                uuid,
+                entryId: editEntry.entry_id,
+                req
+            });
+            setComputedEntries(prev => prev.map(e => e.entry_id === updated.entry_id ? updated : e));
+            setEditEntry(null);
+        } catch (e: unknown) { alert(`Error: ${e}`); }
     };
 
     const totalGross = computedEntries.reduce((s, e) => s + e.gross, 0);
@@ -358,7 +419,7 @@ export function PayrollPage() {
                             </div>
                             <table className="data-table">
                                 <thead>
-                                    <tr><th>Employee</th><th>Basic</th><th>HRA</th><th>Gross</th><th>PF (Emp)</th><th>ESI (Emp)</th><th>PT</th><th>Total Ded.</th><th>Net Pay</th></tr>
+                                    <tr><th>Employee</th><th>Basic</th><th>HRA</th><th>Gross</th><th>PF (Emp)</th><th>ESI (Emp)</th><th>PT</th><th>Total Ded.</th><th>Net Pay</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
                                 </thead>
                                 <tbody>
                                     {computedEntries.map(e => (
@@ -372,6 +433,13 @@ export function PayrollPage() {
                                             <td>₹{fmt(e.pt)}</td>
                                             <td style={{ color: 'var(--color-warning)' }}>₹{fmt(e.total_deductions)}</td>
                                             <td><strong style={{ color: 'var(--color-success)' }}>₹{fmt(e.net_pay)}</strong></td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: 'var(--space-1)', justifyContent: 'flex-end' }}>
+                                                    <button className="btn btn--ghost btn--sm" title="Edit Variables" onClick={() => openEditEntry(e)}>
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -381,6 +449,7 @@ export function PayrollPage() {
                                         <td>₹{fmt(totalGross)}</td>
                                         <td colSpan={4} style={{ color: 'var(--color-warning)' }}>₹{fmt(totalDed)}</td>
                                         <td style={{ color: 'var(--color-success)' }}>₹{fmt(totalNet)}</td>
+                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -569,6 +638,16 @@ export function PayrollPage() {
                                         onChange={e => setSalForm(f => ({ ...f, special: e.target.value }))} placeholder="0" />
                                 </div>
                                 <div className="input-group">
+                                    <label>Traveling Allowance (₹)</label>
+                                    <input type="number" value={salForm.traveling_allowance as string}
+                                        onChange={e => setSalForm(f => ({ ...f, traveling_allowance: e.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Food Allowance (₹)</label>
+                                    <input type="number" value={salForm.food_allowance as string}
+                                        onChange={e => setSalForm(f => ({ ...f, food_allowance: e.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="input-group">
                                     <label>Other Earnings (₹)</label>
                                     <input type="number" value={salForm.other_earnings as string}
                                         onChange={e => setSalForm(f => ({ ...f, other_earnings: e.target.value }))} placeholder="0" />
@@ -597,6 +676,71 @@ export function PayrollPage() {
                             <button type="button" className="btn btn--ghost" onClick={() => setSalEmp(null)}>Cancel</button>
                             <button className="btn btn--primary" onClick={handleSaveSalary}>
                                 <Save size={16} /> Save Structure
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Variable Pay Edit Modal ─── */}
+            {editEntry && (
+                <div className="modal-overlay" onClick={() => setEditEntry(null)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal__header">
+                            <h3><Edit3 size={18} /> Edit Variable Pay — {editEntry.employee_name}</h3>
+                            <button className="btn btn--ghost btn--icon" onClick={() => setEditEntry(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="modal__body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Earnings & Allowances (This Month)</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                                <div className="input-group">
+                                    <label>Overtime Amount (₹)</label>
+                                    <input type="number" value={entryForm.overtime_amount} onChange={e => setEntryForm(f => ({ ...f, overtime_amount: e.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Traveling Allowance (₹)</label>
+                                    <input type="number" value={entryForm.traveling_allowance} onChange={e => setEntryForm(f => ({ ...f, traveling_allowance: e.target.value }))} placeholder={String(editEntry.traveling_allowance)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>Food Allowance (₹)</label>
+                                    <input type="number" value={entryForm.food_allowance} onChange={e => setEntryForm(f => ({ ...f, food_allowance: e.target.value }))} placeholder={String(editEntry.food_allowance)} />
+                                </div>
+                                <div className="input-group">
+                                    <label>Other Earnings (₹)</label>
+                                    <input type="number" value={entryForm.other_earnings} onChange={e => setEntryForm(f => ({ ...f, other_earnings: e.target.value }))} placeholder="0" />
+                                </div>
+                            </div>
+
+                            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginTop: 'var(--space-2)' }}>Deductions & Advances (This Month)</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                                <div className="input-group">
+                                    <label>Leave Deductions (₹)</label>
+                                    <input type="number" value={entryForm.leave_deductions} onChange={e => setEntryForm(f => ({ ...f, leave_deductions: e.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Late Coming Ded. (₹)</label>
+                                    <input type="number" value={entryForm.late_coming_deductions} onChange={e => setEntryForm(f => ({ ...f, late_coming_deductions: e.target.value }))} placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Advance Payout (Given) (₹)</label>
+                                    <input type="number" value={entryForm.advance_payout} onChange={e => setEntryForm(f => ({ ...f, advance_payout: e.target.value }))} title="Loan given this month" placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Advance Deduction (Recovered) (₹)</label>
+                                    <input type="number" value={entryForm.advance_deduction} onChange={e => setEntryForm(f => ({ ...f, advance_deduction: e.target.value }))} title="Loan recovered this month" placeholder="0" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Other Deductions (₹)</label>
+                                    <input type="number" value={entryForm.other_deductions} onChange={e => setEntryForm(f => ({ ...f, other_deductions: e.target.value }))} placeholder="0" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="modal__footer">
+                            <button type="button" className="btn btn--ghost" onClick={() => setEditEntry(null)}>Cancel</button>
+                            <button className="btn btn--primary" onClick={handleSaveEntry}>
+                                <Save size={16} /> Save & Recompute
                             </button>
                         </div>
                     </div>
